@@ -3,30 +3,55 @@ name: CI/CD Pipeline
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
+
+env:
+  AWS_REGION: ap-southeast-2
+  ECR_BACKEND_REPO: feedback-app-backend
+  ECR_FRONTEND_REPO: feedback-app-frontend
+  AWS_ACCOUNT_ID: 537721794461
 
 jobs:
-  backend-tests:
+  deploy:
+    name: Build & Deploy to AWS
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./backend
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
       with:
-        python-version: '3.11'
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
 
-    - name: Install dependencies
+    - name: Login to Amazon ECR
       run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        aws ecr get-login-password --region $AWS_REGION | docker login \
+          --username AWS \
+          --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
 
-    - name: Run tests
+    - name: Build and push BACKEND image
       run: |
-        python -m unittest discover -s tests
+        docker build --platform linux/amd64 -f backend/Dockerfile.backend -t $ECR_BACKEND_REPO backend/
+        docker tag $ECR_BACKEND_REPO:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_BACKEND_REPO:latest
+        docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_BACKEND_REPO:latest
+
+    - name: Build and push FRONTEND image
+      run: |
+        docker build --platform linux/amd64 -f feedback-dashboard/Dockerfile.frontend -t $ECR_FRONTEND_REPO feedback-dashboard/
+        docker tag $ECR_FRONTEND_REPO:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_FRONTEND_REPO:latest
+        docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_FRONTEND_REPO:latest
+
+    - name: Force ECS service redeploy
+      run: |
+        aws ecs update-service \
+          --cluster feedback-app-cluster \
+          --service feedback-app-backend-svc \
+          --force-new-deployment
+
+        aws ecs update-service \
+          --cluster feedback-app-cluster \
+          --service feedback-app-frontend-svc \
+          --force-new-deployment
