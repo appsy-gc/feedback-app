@@ -96,6 +96,22 @@ resource "aws_lb_listener" "frontend" {
   }
 }
 
+resource "aws_lb_listener_rule" "backend_path" {
+  listener_arn = aws_lb_listener.frontend.arn
+  priority     = 10
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.backend.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/submit", "/healthz"]
+    }
+  }
+}
+
 ##############################
 # Security Groups
 ##############################
@@ -226,7 +242,30 @@ resource "aws_ecs_service" "backend" {
   network_configuration {
     subnets         = data.aws_subnets.public.ids
     security_groups = [aws_security_group.ecs_tasks.id]
-    assign_public_ip = true
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.backend.arn
+    container_name   = "backend"
+    container_port   = 5000
+  }
+
+  depends_on = [aws_lb_listener_rule.backend_path]
+}
+
+resource "aws_lb_target_group" "backend" {
+  name        = "${var.app_name}-backend-tg"
+  port        = 5000
+  protocol    = "HTTP"
+  vpc_id      = data.aws_vpc.default.id
+  target_type = "ip"
+  health_check {
+    path                = "/healthz"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+    matcher             = "200"
   }
 }
 
