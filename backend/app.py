@@ -45,5 +45,7 @@ def health_check():
     return jsonify({"status": "ok"}), 200
 
 if __name__ == "__main__":
+    print("Initialising DB...")
     init_db()
+    print("Starting Flask server...")
     app.run(debug=False, host="0.0.0.0")
