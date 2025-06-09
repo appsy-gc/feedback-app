@@ -5,12 +5,14 @@ function App() {
   const [comment, setComment] = useState('');
   const [status, setStatus] = useState(null);
 
+  const API_URL = import.meta.env.VITE_API_URL;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setStatus(null);
 
     try {
-      const response = await fetch('http://localhost:5000/submit', {
+      const response = await fetch(`${API_URL}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, comment }),
