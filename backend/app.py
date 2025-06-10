@@ -4,7 +4,8 @@ import sqlite3
 
 app = Flask(__name__)
 CORS(app, origins=[
-    "http://localhost:5173",  
+    "http://localhost:5173",
+    "http://localhost:5000", 
     "http://localhost:8080",  
     "feedback-app-alb-128255988.ap-southeast-2.elb.amazonaws.com"  
 ])
