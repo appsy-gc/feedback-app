@@ -9,6 +9,7 @@ env:
   ECR_BACKEND_REPO: feedback-app-backend
   ECR_FRONTEND_REPO: feedback-app-frontend
   AWS_ACCOUNT_ID: 537721794461
+  IMAGE_TAG: ${{ github.sha }}
 
 jobs:
   deploy:
@@ -58,14 +59,14 @@ jobs:
     - name: Build and push BACKEND image
       run: |
         docker build --platform linux/amd64 -f backend/Dockerfile.backend -t $ECR_BACKEND_REPO backend/
-        docker tag $ECR_BACKEND_REPO:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_BACKEND_REPO:latest
-        docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_BACKEND_REPO:latest
+        docker tag $ECR_BACKEND_REPO:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_BACKEND_REPO:$IMAGE_TAG
+        docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_BACKEND_REPO:$IMAGE_TAG
 
     - name: Build and push FRONTEND image
       run: |
         docker build --platform linux/amd64 -f feedback-dashboard/Dockerfile.frontend -t $ECR_FRONTEND_REPO feedback-dashboard/
-        docker tag $ECR_FRONTEND_REPO:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_FRONTEND_REPO:latest
-        docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_FRONTEND_REPO:latest
+        docker tag $ECR_FRONTEND_REPO:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_FRONTEND_REPO:$IMAGE_TAG
+        docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_FRONTEND_REPO:$IMAGE_TAG
 
     - name: Force ECS service redeploy
       run: |
